@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000/api/guide';
+const API_URL = 'https://voteyatra-backend-659148944482.asia-south1.run.app/api/guide';
 
 let currentSteps = [];
 let currentStepIndex = 0;
