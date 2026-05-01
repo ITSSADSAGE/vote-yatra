@@ -55,6 +55,9 @@ VoteYatra converts the voting process into a guided journey:
 * 🛡️ **Fallback System**
   Ensures reliable output even if AI fails
 
+* 📍 **Beta: Polling Booth Locator**
+  Interactive map feature using **OpenStreetMap (Overpass API)** to help users find their nearest polling station in real-time.
+
 * 🎯 **Clean UI**
   Designed for clarity, readability, and quick understanding
 
@@ -64,7 +67,7 @@ VoteYatra converts the voting process into a guided journey:
 
 1. User enters age and selects voting status
 2. Decision engine determines eligibility and flow
-3. Backend calls Google Gemini API
+3. Backend calls Google Gemini API (with persona-aware prompt engineering)
 4. Structured response is generated
 5. Frontend renders a guided journey
 6. User completes simulation
@@ -74,11 +77,11 @@ VoteYatra converts the voting process into a guided journey:
 ## Tech Stack
 
 ### Frontend
-* HTML, CSS, JavaScript
+* HTML, CSS, JavaScript (Modern UI with Glassmorphism)
 
 ### Backend
-* Node.js
-* Express.js
+* Node.js / Express.js
+* Google Generative AI (Gemini 2.0 Flash)
 
 ### Google Technologies Used
 
@@ -93,14 +96,24 @@ VoteYatra converts the voting process into a guided journey:
 
 ---
 
-## 🚀 Recent Updates (Gemini 2.0 Flash)
+## 🚀 Recent Updates & Fixes
 
 The system has been recently upgraded to leverage **Gemini 2.0 Flash** with a focus on speed and reliability:
 
-1.  **Direct API Integration**: Bypassed SDK overhead to use direct HTTPS calls for faster response times.
-2.  **Dual-Model Fallback**: Primary use of `gemini-2.0-flash` with automatic fallback to `gemini-1.5-flash` ensuring 100% availability.
-3.  **ECI Reliability Layer**: A specialized fallback system that delivers static, verified Election Commission of India (ECI) guidelines if AI services are unreachable.
-4.  **In-Memory Caching**: Optimized API usage by caching frequent persona-based requests.
+1.  **Persona-Specific Accuracy Fix**: 
+    Previously, different user personas (e.g., "Not Registered" vs "First Time Voter") occasionally received similar generic advice. We fixed this by implementing **Status-Aware Prompt Engineering**. The AI is now strictly constrained to provide specific starting points based on the user's situation (e.g., forcing Form 6 registration steps for unregistered users).
+
+2.  **Direct API Integration**: 
+    Bypassed SDK overhead to use direct HTTPS calls for faster response times and better compatibility with Gemini 2.0 Flash.
+
+3.  **Dual-Model Fallback**: 
+    Primary use of `gemini-2.0-flash` with automatic fallback to `gemini-1.5-flash` ensuring 100% availability.
+
+4.  **ECI Reliability Layer**: 
+    A specialized fallback system that delivers static, verified Election Commission of India (ECI) guidelines if AI services are unreachable.
+
+5.  **Live Booth Locator (Beta)**: 
+    Integrated Geolocation and OpenStreetMap data to provide a functional booth finder within the guided journey.
 
 ---
 
@@ -169,9 +182,9 @@ Backend is deployed using Google Cloud Run for:
 
 ## Future Scope
 
-* Polling booth locator (OpenStreetMap based)
 * Multilingual support
 * Real-time election updates
+* Deep integration with ECI candidate data
 
 ---
 
