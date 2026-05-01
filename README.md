@@ -1,10 +1,14 @@
-# VoteYatra – Guided Voting Assistant
+# VoteYatra – AI-Powered Guided Voting Assistant
 
-## Overview
+[![Gemini](https://img.shields.io/badge/AI-Gemini%202.0%20Flash-blueviolet)](https://deepmind.google/technologies/gemini/)
+[![Status](https://img.shields.io/badge/Status-Live-success)](http://localhost:3000)
+[![Tech](https://img.shields.io/badge/Stack-Node%20%2F%20Express%20%2F%20JS-blue)](https://nodejs.org/)
 
-VoteYatra is an AI-powered assistant that helps users understand the voting process through a structured, step-by-step journey.
+## 🇮🇳 Overview
 
-Instead of a chatbot, it delivers a guided flow based on the user’s context (age and voting status), making the process clear, actionable, and easy to follow.
+**VoteYatra** is a specialized civic assistant designed to help Indian citizens navigate the voting process with ease. By combining rule-based eligibility logic with the intelligence of **Google Gemini 2.0 Flash**, it provides a personalized, step-by-step journey tailored to your specific age and registration status.
+
+Instead of a generic chatbot, VoteYatra delivers a structured, action-oriented flow that guides you from registration to the polling booth.
 
 ---
 
