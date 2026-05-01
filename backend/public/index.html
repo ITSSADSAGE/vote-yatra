@@ -32,10 +32,10 @@
                     <div class="input-group" style="margin-bottom: 2rem;">
                         <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
                     </div>
-                    <div class="button-group">
-                        <button class="persona-btn" data-persona="first-time">I am a first-time voter</button>
-                        <button class="persona-btn" data-persona="not-registered">I am not registered yet</button>
-                        <button class="persona-btn" data-persona="already-registered">I am already registered</button>
+                    <div class="button-group" role="group" aria-label="Select your voter category">
+                        <button class="persona-btn" data-persona="first-time" aria-label="Journey for first-time voters">I am a first-time voter</button>
+                        <button class="persona-btn" data-persona="not-registered" aria-label="Journey for unregistered citizens">I am not registered yet</button>
+                        <button class="persona-btn" data-persona="already-registered" aria-label="Journey for registered voters">I am already registered</button>
                     </div>
                     <button id="demo-journey-btn" class="demo-btn hidden">View how voting works</button>
                     <p style="margin-top: 1.5rem; font-size: 0.8rem; color: #64748b; text-align: center;">
@@ -60,12 +60,14 @@
                     </div>
 
                     <p style="margin-top: -2rem; margin-bottom: 2rem; font-size: 0.75rem; color: #64748b; text-align: center;">
-                        🗳️ Based on Election Commission of India guidelines
+                        🗳️ Based on Election Commission of India guidelines 
+                        <span id="source-badge" style="margin-left: 0.5rem; opacity: 0.7; font-size: 0.65rem; border: 1px solid #334155; padding: 2px 6px; border-radius: 4px; display: none;"></span>
                     </p>
 
                     <div id="steps-container">
                         <!-- Steps will be injected here -->
                     </div>
+                    <button id="find-booth-btn" class="beta-btn">📍 Find Nearby Polling Booths (Beta)</button>
                     <div class="nav-buttons">
                         <button id="prev-step" class="secondary-btn">Previous</button>
                         <button id="next-step" class="primary-btn">Continue</button>
@@ -96,6 +98,21 @@
         <footer>
             <p>&copy; 2026 VoteYatra. Empowering Voters.</p>
         </footer>
+    </div>
+
+    <!-- Modal for Polling Booth Locator -->
+    <div id="booth-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button id="close-booth-modal" class="close-modal">&times;</button>
+            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Nearby Polling Locations (Beta)</h3>
+            <p id="booth-modal-status" style="font-size: 0.8rem; margin-bottom: 1.5rem;">Fetching nearby locations...</p>
+            
+            <div id="booth-results">
+                <!-- Loading or results injected here -->
+                <div class="spinner"></div>
+                <p style="text-align: center; color: var(--text-muted);">Fetching live data from OpenStreetMap...</p>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

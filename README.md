@@ -79,13 +79,24 @@ VoteYatra converts the voting process into a guided journey:
 ### Google Technologies Used
 
 * **Google Gemini API**
-  Used to generate structured and personalized voting guidance
+  Used to generate structured and personalized voting guidance. Now updated to use **Gemini 2.0 Flash** via direct API integration for maximum performance.
 
 * **Google Cloud Run**
-  Used to deploy backend securely and manage environment variables
+  Used to deploy backend securely and manage environment variables.
 
 * **Google Antigravity**
-  Used for prompt-driven development and rapid iteration
+  Used for prompt-driven development and rapid iteration.
+
+---
+
+## 🚀 Recent Updates (Gemini 2.0 Flash)
+
+The system has been recently upgraded to leverage **Gemini 2.0 Flash** with a focus on speed and reliability:
+
+1.  **Direct API Integration**: Bypassed SDK overhead to use direct HTTPS calls for faster response times.
+2.  **Dual-Model Fallback**: Primary use of `gemini-2.0-flash` with automatic fallback to `gemini-1.5-flash` ensuring 100% availability.
+3.  **ECI Reliability Layer**: A specialized fallback system that delivers static, verified Election Commission of India (ECI) guidelines if AI services are unreachable.
+4.  **In-Memory Caching**: Optimized API usage by caching frequent persona-based requests.
 
 ---
 

@@ -14,10 +14,10 @@ const SIMULATION_STEPS = [
 ];
 
 const DEMO_STEPS = [
-    { title: "Step 1: Check Registration", description: "Voters check their name in the electoral search portal.", insight: "Ensures legal eligibility.", action: "Visit voters.eci.gov.in", tip: "Always have your EPIC number ready." },
-    { title: "Step 2: Reach Polling Booth", description: "On election day, voters go to their assigned polling station.", insight: "Ensures local representation.", action: "Check Voter Helpline App for booth location", tip: "Reach early to avoid long queues." },
-    { title: "Step 3: Identity Check", description: "Officers verify ID and apply indelible ink on the finger.", insight: "Prevents duplicate voting.", action: "Show Voter ID or Aadhaar", tip: "Indelible ink is a mark of pride!" },
-    { title: "Step 4: Press the Button", description: "Inside the booth, press the button on the EVM for your chosen candidate.", insight: "The core act of democracy.", action: "Press button and listen for the beep", tip: "Check the VVPAT slip through the glass." }
+    { title: "Check Registration", description: "Voters check their name in the electoral search portal.", insight: "Ensures legal eligibility.", action: "Visit voters.eci.gov.in", tip: "Always have your EPIC number ready." },
+    { title: "Reach Polling Booth", description: "On election day, voters go to their assigned polling station.", insight: "Ensures local representation.", action: "Check Voter Helpline App for booth location", tip: "Reach early to avoid long queues." },
+    { title: "Identity Check", description: "Officers verify ID and apply indelible ink on the finger.", insight: "Prevents duplicate voting.", action: "Show Voter ID or Aadhaar", tip: "Indelible ink is a mark of pride!" },
+    { title: "Press the Button", description: "Inside the booth, press the button on the EVM for your chosen candidate.", insight: "The core act of democracy.", action: "Press button and listen for the beep", tip: "Check the VVPAT slip through the glass." }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restart-btn');
     const errorDisplay = document.getElementById('error-display');
     const demoBtn = document.getElementById('demo-journey-btn');
+    const boothBtn = document.getElementById('find-booth-btn');
+    const boothModal = document.getElementById('booth-modal');
+    const closeBoothModal = document.getElementById('close-booth-modal');
+    const boothResults = document.getElementById('booth-results');
 
     function determineUserPath(age, status) {
         if (age < 18) return `You are not eligible yet. Focus on learning about Indian democracy for now!`;
@@ -48,6 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     personaBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
+            // Spam Protection: Prevent multiple clicks within 5 seconds
+            if (btn.classList.contains('loading')) return;
+
             const ageStr = ageInput.value.trim();
             const age = parseInt(ageStr);
             const persona = btn.getAttribute('data-persona');
@@ -73,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 btn.disabled = true;
-                btn.textContent = 'Loading AI Guide...';
+                btn.classList.add('loading');
+                btn.textContent = 'Consulting AI...';
 
                 const response = await fetch(API_URL, {
                     method: 'POST',
@@ -90,17 +98,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 currentSteps = data.steps;
+                
+                // Show source visibility (Subtle Badge)
+                const sourceBadge = document.getElementById('source-badge');
+                if (sourceBadge) {
+                    sourceBadge.style.display = 'inline-block';
+                    sourceBadge.textContent = `Source: ${data.source === 'gemini' ? 'Gemini AI' : 'ECI Fallback'}`;
+                    sourceBadge.style.borderColor = data.source === 'gemini' ? 'var(--primary)' : '#64748b';
+                }
+
                 startJourney();
             } catch (err) {
                 showError(err.message);
             } finally {
-                btn.disabled = false;
-                const LABELS = {
-                    'first-time': 'I am a first-time voter',
-                    'not-registered': 'I am not registered yet',
-                    'already-registered': 'I am already registered'
-                };
-                btn.textContent = LABELS[btn.getAttribute('data-persona')] || btn.getAttribute('data-persona');
+                // Cooldown: Keep button disabled for a moment to prevent rate-limit spam
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.classList.remove('loading');
+                    const LABELS = {
+                        'first-time': 'I am a first-time voter',
+                        'not-registered': 'I am not registered yet',
+                        'already-registered': 'I am already registered'
+                    };
+                    btn.textContent = LABELS[btn.getAttribute('data-persona')] || btn.getAttribute('data-persona');
+                }, 5000); 
             }
         });
     });
@@ -119,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = `${progress}%`;
 
         stepsContainer.innerHTML = `
-            <p class="step-counter">Step ${currentStepIndex + 1} — ${step.title}</p>
+            <p class="step-counter">STEP ${currentStepIndex + 1} — ${step.title.toUpperCase()}</p>
 
             <div class="step-card fade-in">
                 <h3 class="step-title">${step.title}</h3>
@@ -307,4 +328,111 @@ document.addEventListener('DOMContentLoaded', () => {
         decisionBanner.textContent = "Viewing Demo Journey: Here is how the voting process works in India.";
         startJourney();
     });
+
+    // Booth Locator Logic
+    boothBtn.addEventListener('click', () => {
+        boothModal.classList.remove('hidden');
+        findNearbyBooths();
+    });
+
+    closeBoothModal.addEventListener('click', () => {
+        boothModal.classList.add('hidden');
+    });
+
+    async function findNearbyBooths() {
+        const statusText = document.getElementById('booth-modal-status');
+        statusText.textContent = "Fetching nearby locations...";
+        
+        boothResults.innerHTML = `
+            <div class="spinner"></div>
+            <p style="text-align: center; color: var(--text-muted);">Accessing geolocation...</p>
+        `;
+
+        if (!navigator.geolocation) {
+            showBoothFallback(null, null, "Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            statusText.textContent = "Searching local area...";
+            
+            const radius = 5000; // 5km search radius
+
+            // Overpass API Query for polling stations
+            const query = `[out:json][timeout:3];node["amenity"="polling_station"](around:${radius},${latitude},${longitude});out body;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                if (data.elements && data.elements.length > 0) {
+                    renderBooths(data.elements, latitude, longitude);
+                } else {
+                    showBoothFallback(latitude, longitude, "No specific polling booths found nearby in OpenStreetMap.");
+                }
+            } catch (err) {
+                console.error("Booth lookup failed:", err);
+                showBoothFallback(latitude, longitude, "Live data lookup timed out or failed.");
+            }
+        }, (err) => {
+            showBoothFallback(null, null, "Location access denied or unavailable.");
+        });
+    }
+
+    function renderBooths(elements, lat, lng) {
+        const statusText = document.getElementById('booth-modal-status');
+        statusText.textContent = "Found local booths!";
+
+        const listHTML = elements.slice(0, 3).map(e => {
+            const name = e.tags.name || "Polling Station";
+            return `
+                <div class="booth-item" style="padding: 0.75rem; margin-bottom: 0.5rem;">
+                    <h4 style="font-size: 0.9rem;">${name}</h4>
+                    <a class="booth-map-link" href="https://www.google.com/maps?q=${e.lat},${e.lon}" target="_blank">Navigate</a>
+                </div>
+            `;
+        }).join('');
+
+        boothResults.innerHTML = `
+            <div class="booth-list">
+                ${listHTML}
+            </div>
+            <div style="margin-top: 1rem; border-radius: 8px; overflow: hidden; border: 1px solid #334155;">
+                <iframe 
+                    width="100%" 
+                    height="200" 
+                    style="border:0;" 
+                    src="https://www.google.com/maps?q=${lat},${lng}&z=14&output=embed">
+                </iframe>
+            </div>
+            <button class="primary-btn" style="margin-top: 1rem; width: 100%;" onclick="window.open('https://www.google.com/maps/search/polling+booth+near+me')">Open Full Map</button>
+        `;
+    }
+
+    function showBoothFallback(lat, lng, reason) {
+        const statusText = document.getElementById('booth-modal-status');
+        statusText.textContent = "Showing nearby polling locations based on your current area";
+
+        const mapQuery = lat && lng ? `${lat},${lng}` : "polling+booth+near+me";
+        
+        boothResults.innerHTML = `
+            <div style="border-radius: 8px; overflow: hidden; border: 1px solid #334155;">
+                <iframe 
+                    width="100%" 
+                    height="300" 
+                    style="border:0;" 
+                    loading="lazy" 
+                    allowfullscreen 
+                    src="https://www.google.com/maps?q=${mapQuery}&z=14&output=embed">
+                </iframe>
+            </div>
+            <button class="primary-btn" style="margin-top: 1rem; width: 100%;" onclick="window.open('https://www.google.com/maps/search/polling+booth+near+me')">Open Full Map</button>
+        `;
+    }
 });
