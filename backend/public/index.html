@@ -66,7 +66,6 @@
                     <div id="steps-container">
                         <!-- Steps will be injected here -->
                     </div>
-                    <button id="find-booth-btn" class="beta-btn">📍 Find Nearby Polling Booths (Beta)</button>
                     <div class="nav-buttons">
                         <button id="prev-step" class="secondary-btn">Previous</button>
                         <button id="next-step" class="primary-btn">Continue</button>
@@ -97,21 +96,6 @@
         <footer>
             <p>&copy; 2026 VoteYatra. Empowering Voters.</p>
         </footer>
-    </div>
-
-    <!-- Modal for Polling Booth Locator -->
-    <div id="booth-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button id="close-booth-modal" class="close-modal">&times;</button>
-            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Nearby Polling Booths</h3>
-            <p style="font-size: 0.8rem; margin-bottom: 1.5rem;">Searching based on your current location...</p>
-            
-            <div id="booth-results">
-                <!-- Loading or results injected here -->
-                <div class="spinner"></div>
-                <p style="text-align: center; color: var(--text-muted);">Fetching live data from OpenStreetMap...</p>
-            </div>
-        </div>
     </div>
 
     <script src="script.js"></script>
