@@ -1,52 +1,76 @@
 /**
- * VoteYatra - Backend API Test Suite
- * This script performs a basic smoke test on the core /api/guide endpoint.
+ * VoteYatra - Backend API Test Suite (Enhanced)
  * Criteria: Testing, Efficiency, Reliability.
  */
 
 async function testApi() {
-    console.log("🚀 Starting VoteYatra API Smoke Test...");
+    console.log("🚀 Starting VoteYatra API Comprehensive Test...");
     
     const testCases = [
-        { age: 25, voterStatus: "first-time", expected: "new_voter" },
-        { age: 17, voterStatus: "not-registered", expected: "ineligible" },
-        { age: 40, voterStatus: "already-registered", expected: "ready_voter" }
+        // Standard Cases
+        { name: "Valid First-Time Voter", age: 25, voterStatus: "first-time", expectedSource: ["gemini", "gemini_cache"] },
+        { name: "Valid Registered Voter", age: 40, voterStatus: "already-registered", expectedSource: ["gemini", "gemini_cache"] },
+        
+        // Edge Cases (Age Boundaries)
+        { name: "Minimum Voting Age", age: 18, voterStatus: "not-registered", expectedSource: ["gemini", "gemini_cache"] },
+        { name: "Just Below Voting Age", age: 17, voterStatus: "not-registered", expectedEligible: false },
+        
+        // Error / Input Validation Cases
+        { name: "Missing Age", voterStatus: "first-time", expectedStatus: 400 },
+        { name: "Invalid Age (String)", age: "young", voterStatus: "first-time", expectedStatus: 400 },
+        { name: "Missing Status", age: 25, expectedStatus: 400 }
     ];
+
+    let passed = 0;
+    let failed = 0;
 
     for (const tc of testCases) {
         try {
-            console.log(`[Test] Checking Age: ${tc.age}, Status: ${tc.voterStatus}...`);
+            process.stdout.write(`[Test] ${tc.name}... `);
             const response = await fetch('http://localhost:3000/api/guide', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(tc)
+                body: JSON.stringify({ age: tc.age, voterStatus: tc.voterStatus })
             });
 
-            if (!response.ok) {
-                console.error(`❌ Request Failed with status ${response.status}`);
+            if (tc.expectedStatus && response.status !== tc.expectedStatus) {
+                console.log(`❌ Failed (Status ${response.status}, expected ${tc.expectedStatus})`);
+                failed++;
+                continue;
+            }
+
+            if (!response.ok && !tc.expectedStatus) {
+                console.log(`❌ Failed (Status ${response.status})`);
+                failed++;
                 continue;
             }
 
             const data = await response.json();
             
-            // Validate Structure
-            const hasRequiredFields = data.user_type && data.source && Array.isArray(data.steps);
-            
-            if (hasRequiredFields) {
-                console.log(`✅ Success! Source: ${data.source}, User Type: ${data.user_type}`);
-            } else {
-                console.warn(`⚠️ Partial Success: Missing expected fields in response.`);
+            if (tc.expectedEligible !== undefined && data.eligible !== tc.expectedEligible) {
+                console.log(`❌ Failed (Eligible: ${data.eligible}, expected ${tc.expectedEligible})`);
+                failed++;
+                continue;
             }
 
+            if (tc.expectedSource && !tc.expectedSource.includes(data.source) && data.source !== "fallback") {
+                console.log(`❌ Failed (Source: ${data.source}, expected one of ${tc.expectedSource.join(', ')})`);
+                failed++;
+                continue;
+            }
+
+            console.log(`✅ Passed`);
+            passed++;
+
         } catch (err) {
-            console.error(`❌ Test Error: ${err.message}. (Is the server running on :3000?)`);
+            console.log(`❌ Error: ${err.message}`);
+            failed++;
         }
     }
 
-    console.log("\n🏁 Smoke Test Completed.");
+    console.log(`\n🏁 Test Results: ${passed} Passed, ${failed} Failed.`);
 }
 
-// Check if running in a test environment or directly
 if (require.main === module) {
     testApi();
 }

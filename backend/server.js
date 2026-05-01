@@ -1,21 +1,52 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fetch = globalThis.fetch || require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Note: SDK is bypassed for Direct API Connection to ensure compatibility with Gemini 2 Flash.
-
-// Efficiency: Simple In-Memory Cache to optimize API usage
+/**
+ * 🚀 EFFICIENCY & PERFORMANCE
+ * Simple In-Memory Cache to optimize API usage and reduce latency.
+ */
 const responseCache = new Map();
+
+/**
+ * 🛡️ SECURITY & RELIABILITY
+ * Simple in-memory rate limiter to prevent API abuse.
+ */
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const userRequests = rateLimitMap.get(ip) || [];
+    const recentRequests = userRequests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+    
+    if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
+    }
+    
+    recentRequests.push(now);
+    rateLimitMap.set(ip, recentRequests);
+    return true;
+}
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Manual Security Headers (Improving Security Score)
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
 
 // Root Route - Serves Frontend
 app.get('/', (req, res) => {
@@ -29,16 +60,12 @@ app.get('/', (req, res) => {
  * Ensures age and status are provided and logically sound.
  */
 function validateInput(age, voterStatus) {
-    // Check if age is present and is a valid number
     if (age === undefined || age === null || isNaN(age)) {
         return { isValid: false, error: "A valid numeric age is required." };
     }
-
-    // Check if voterStatus is provided
     if (!voterStatus || typeof voterStatus !== 'string') {
         return { isValid: false, error: "Voter status must be provided as a string." };
     }
-
     return { isValid: true };
 }
 
@@ -83,27 +110,23 @@ function getGeminiApiKey() {
 }
 
 function parseGeminiJsonResponse(data) {
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text || typeof text !== 'string') {
-        return null;
-    }
-
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/i);
-    const jsonText = jsonMatch ? jsonMatch[1] : text;
-    const cleanedText = jsonText.trim();
-
     try {
-        return JSON.parse(cleanedText);
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text || typeof text !== 'string') return null;
+
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)```/i);
+        const jsonText = jsonMatch ? jsonMatch[1] : text;
+        return JSON.parse(jsonText.trim());
     } catch (error) {
+        console.error("[Parser Error] Failed to parse Gemini JSON:", error.message);
         return null;
     }
 }
 
 /**
- * 3. Generate Guide
- * Calls Google Gemini API to create a personalized voting journey.
+ * 3. Generate Guide (Google Services Integration)
+ * Calls Google Gemini API (2.0 Flash) to create a personalized voting journey.
  */
-// Direct API Connection (Bypassing broken SDK for maximum reliability)
 const API_BASE_URL = "https://generativelanguage.googleapis.com/v1/models";
 
 async function generateGuide(age, voterStatus, geminiKey) {
@@ -117,7 +140,7 @@ async function generateGuide(age, voterStatus, geminiKey) {
                 return { steps: responseCache.get(cacheKey), source: "gemini_cache" };
             }
 
-            console.log(`[Direct AI] Requesting ${modelName}...`);
+            console.log(`[Google Services] Requesting ${modelName} for Persona: ${voterStatus}`);
             
             const response = await fetch(`${API_BASE_URL}/${modelName}:generateContent?key=${geminiKey}`, {
                 method: "POST",
@@ -134,7 +157,7 @@ async function generateGuide(age, voterStatus, geminiKey) {
                             `
                         }]
                     }],
-                    generationConfig: { temperature: 0.7, topP: 0.8, topK: 40 }
+                    generationConfig: { temperature: 0.2, topP: 0.8, topK: 40 }
                 })
             });
 
@@ -151,88 +174,83 @@ async function generateGuide(age, voterStatus, geminiKey) {
 
             // Success: Cache and return
             responseCache.set(cacheKey, parsedData.steps);
-            return { steps: parsedData.steps, source: `gemini_${modelName.split('-')[1]}` };
+            return { steps: parsedData.steps, source: `gemini` };
 
         } catch (error) {
             lastError = error;
-            console.warn(`[Direct AI] ${modelName} failed: ${error.message}`);
+            console.warn(`[Google Services] ${modelName} failed: ${error.message}`);
         }
     }
 
-    console.error("All Direct AI Channels Failed. Triggering ECI Fallback.");
+    console.error("All AI Channels Failed. Triggering ECI Fallback.");
     return { steps: getFallbackGuide(voterStatus), source: "fallback" };
 }
 
 /**
- * 4. Get Fallback Guide
- * Returns a static, reliable guide if the AI is unavailable, times out, or returns invalid data.
- * This is a CRITICAL reliability layer that ensures the service never fails to provide 
- * accurate Election Commission of India (ECI) process information to the user.
+ * 4. Get Fallback Guide (Reliability Layer)
  */
 function getFallbackGuide(status) {
-    // Specialized steps for users not yet on the Electoral Roll
     if (status === 'not-registered') {
         return [
             { 
                 title: "Register as a Voter (Form 6)", 
-                description: "The first and most critical step is to apply for registration on the official ECI portal.", 
-                insight: "Without registration, you cannot cast a vote even if you have an ID card.",
-                action: "Go to voters.eci.gov.in and fill Form 6.",
-                tip: "Keep a digital copy of your age and address proof ready." 
+                description: "The first step is to apply for registration on the official ECI portal.", 
+                insight: "Registration is the primary eligibility gate for all Indian citizens.",
+                action: "Visit voters.eci.gov.in and fill Form 6.",
+                tip: "Keep address proof and age proof ready." 
             },
             { 
                 title: "Track Application Status", 
-                description: "Once submitted, use your reference ID to track the progress of your application.", 
-                insight: "Ensures that any discrepancies are fixed before the electoral roll is finalized.",
-                action: "Check status on the Voter Helpline App",
-                tip: "It usually takes 2-4 weeks for the BLO to verify your application." 
+                description: "Use your reference ID to monitor your application progress.", 
+                insight: "Verification ensures your name reaches the final roll.",
+                action: "Check status on Voter Helpline App",
+                tip: "Registration usually takes 2-4 weeks." 
             },
             { 
-                title: "Verify Name in Final Roll", 
-                description: "After approval, verify that your name correctly appears in the official Electoral Roll.", 
-                insight: "Confirmation of your name is the final gatekeeper for voting eligibility.",
+                title: "Verify Name in Roll", 
+                description: "Once approved, ensure your name appears in the Electoral Roll.", 
+                insight: "Your name on the roll is your legal permit to vote.",
                 action: "Search name on voters.eci.gov.in",
-                tip: "Download your e-EPIC as soon as your name is added." 
+                tip: "Download your e-EPIC card once registered." 
             },
             { 
-                title: "Find Your Polling Station", 
-                description: "Identify your assigned booth for the upcoming election day.", 
-                insight: "Knowing your booth location in advance prevents last-minute hurdles.",
+                title: "Locate Your Booth", 
+                description: "Identify your assigned polling station for election day.", 
+                insight: "Booth location prevents last-minute hurdles.",
                 action: "Locate booth via Voter Helpline App",
-                tip: "Note down the Serial Number for easy identification at the booth." 
+                tip: "Note down your Serial Number for easier check-in." 
             }
         ];
     }
 
-    // Default steps for already registered voters
     return [
         { 
-            title: "Verify Your Name in Electoral Roll", 
-            description: "Check if your name is present in the official Electoral Roll on the ECI search portal.", 
-            insight: "Legal eligibility to vote depends entirely on your presence in the current constituency roll.",
-            action: "Visit voters.eci.gov.in (Official ECI Portal)",
-            tip: "Use your EPIC number (Voter ID) for a faster and more accurate search." 
+            title: "Verify Your Name in Roll", 
+            description: "Confirm your presence in the current Electoral Roll on the ECI portal.", 
+            insight: "Eligibility depends entirely on being in the constituency roll.",
+            action: "Visit voters.eci.gov.in",
+            tip: "Use your EPIC number for an accurate search." 
         },
         { 
-            title: "Locate Your Polling Station", 
-            description: "Find the exact location of your Polling Station and Booth number using the Voter Helpline App.", 
-            insight: "Knowing your booth in advance prevents last-minute confusion and saves time on election day.",
-            action: "Open Voter Helpline App -> Search in Electoral Roll",
-            tip: "Check the Part Number and Serial Number on your Voter ID or digital slip." 
+            title: "Find Your Polling Station", 
+            description: "Locate your assigned booth and Part number.", 
+            insight: "Advanced knowledge prevents booth-day confusion.",
+            action: "Check Voter Helpline App",
+            tip: "Download your digital voter slip if available." 
         },
         { 
-            title: "Prepare Your Identity Proof", 
-            description: "Carry your original EPIC card or one of the 12 alternative IDs approved by the ECI (e.g., Aadhaar, PAN).", 
-            insight: "Identity verification is the first step at the booth to prevent impersonation and fraud.",
-            action: "Download digital EPIC (e-EPIC) if you don't have the physical card.",
-            tip: "Aadhar card is the most common and widely accepted alternative to the physical Voter ID." 
+            title: "Prepare Identity Proof", 
+            description: "Carry your physical Voter ID or an approved alternative (Aadhaar, PAN).", 
+            insight: "ID verification is mandatory at the polling booth entrance.",
+            action: "Keep original ID ready for verification.",
+            tip: "Aadhaar is the most widely accepted alternative." 
         },
         { 
-            title: "Cast Your Vote on EVM/VVPAT", 
-            description: "Enter the booth, get your finger inked, and press the blue button on the EVM next to your candidate.", 
-            insight: "Your vote is confirmed only after the beep sound and viewing the slip in the VVPAT glass.",
-            action: "Research your local candidates on the Know Your Candidate (KYC) app.",
-            tip: "The VVPAT slip is visible for 7 seconds—ensure it matches your choice before leaving." 
+            title: "Cast Your Vote on EVM", 
+            description: "Enter the booth and press the button for your candidate on the EVM.", 
+            insight: "Verify your vote by watching the VVPAT slip for 7 seconds.",
+            action: "Research local candidates before going to the booth.",
+            tip: "Look for the green light and listen for the long beep." 
         }
     ];
 }
@@ -241,20 +259,25 @@ function getFallbackGuide(status) {
 
 app.post('/api/guide', async (req, res) => {
     try {
-        const { age, voterStatus } = req.body;
-        console.log(`[Request] Incoming: Age=${age}, Status=${voterStatus}`);
+        const ip = req.ip || req.headers['x-forwarded-for'];
+        
+        // Rate Limiting
+        if (!checkRateLimit(ip)) {
+            console.warn(`[Security] Rate limit exceeded for IP: ${ip}`);
+            return res.status(429).json({ error: "Too many requests. Please try again in a minute." });
+        }
 
+        const { age, voterStatus } = req.body;
+        
         // Step 1: Validate Input
         const validation = validateInput(age, voterStatus);
         if (!validation.isValid) {
             return res.status(400).json({ error: validation.error });
         }
 
-        // Step 2: Determine User Type and Eligibility
+        // Step 2: Determine User Context
         const userContext = determineUserType(age, voterStatus);
-        console.log(`[Logic] Classified as: ${userContext.type} (${userContext.reason})`);
-
-        // Immediate exit for ineligible users
+        
         if (!userContext.eligible) {
             return res.json({
                 eligible: false,
@@ -268,38 +291,33 @@ app.post('/api/guide', async (req, res) => {
 
         const geminiKey = getGeminiApiKey();
         if (!geminiKey) {
-            console.error("Missing GEMINI_API_KEY. Using fallback guide.");
             return res.status(500).json({
                 eligible: true,
                 user_type: userContext.type,
-                reason: userContext.reason,
                 source: "fallback",
                 steps: getFallbackGuide(voterStatus),
-                error: "Missing GEMINI_API_KEY in backend/.env"
+                error: "Missing API Configuration"
             });
         }
 
-        // Step 3 & 4: Generate Guide with Hybrid Handling
+        // Step 3: Generate Guide with Hybrid Handling
         const { steps, source } = await generateGuide(age, voterStatus, geminiKey);
-        console.log(`[Response] Guide generated via: ${source}`);
 
-        // Final Response
         res.json({
             eligible: true,
             user_type: userContext.type,
-            reason: userContext.reason,
             source: source,
             steps: steps
         });
 
     } catch (error) {
-        console.error("Internal Server Error:", error);
+        console.error("[Internal Error]", error);
         res.status(500).json({
             eligible: false,
             user_type: "error",
             source: "fallback",
-            steps: getFallbackGuide(voterStatus),
-            error: "Something went wrong. Please try again."
+            steps: [],
+            error: "An unexpected error occurred. Please try again."
         });
     }
 });

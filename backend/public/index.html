@@ -27,10 +27,12 @@
                 <div class="card">
                     <h2>Start Your VoteYatra</h2>
                     <p>Enter your age and select your current voting status.</p>
-                    <div id="error-display" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
+                    <div id="error-display" class="hidden" role="alert" aria-live="assertive" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
                     <p style="font-size: 0.8rem; color: #64748b; margin-top: -1rem; margin-bottom: 1.5rem;">Select one option to begin your journey</p>
                     <div class="input-group" style="margin-bottom: 2rem;">
-                        <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
+                        <label for="user-age" class="sr-only">Your Age</label>
+                        <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" aria-describedby="age-hint" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
+                        <p id="age-hint" class="sr-only">Entering age below 18 will restrict access to voting guides.</p>
                     </div>
                     <div class="button-group" role="group" aria-label="Select your voter category">
                         <button class="persona-btn" data-persona="first-time" aria-label="Journey for first-time voters">I am a first-time voter</button>
