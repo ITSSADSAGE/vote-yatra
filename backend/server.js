@@ -260,23 +260,26 @@ function getFallbackGuide(status) {
 app.post('/api/guide', async (req, res) => {
     try {
         const ip = req.ip || req.headers['x-forwarded-for'];
+        const { age, voterStatus } = req.body;
         
+        console.log(`[Request] Incoming: Age=${age}, Status=${voterStatus} from IP: ${ip}`);
+
         // Rate Limiting
         if (!checkRateLimit(ip)) {
             console.warn(`[Security] Rate limit exceeded for IP: ${ip}`);
             return res.status(429).json({ error: "Too many requests. Please try again in a minute." });
         }
 
-        const { age, voterStatus } = req.body;
-        
         // Step 1: Validate Input
         const validation = validateInput(age, voterStatus);
         if (!validation.isValid) {
+            console.warn(`[Validation] Invalid input: ${validation.error}`);
             return res.status(400).json({ error: validation.error });
         }
 
         // Step 2: Determine User Context
         const userContext = determineUserType(age, voterStatus);
+        console.log(`[Logic] User Classified as: ${userContext.type}`);
         
         if (!userContext.eligible) {
             return res.json({
@@ -291,6 +294,7 @@ app.post('/api/guide', async (req, res) => {
 
         const geminiKey = getGeminiApiKey();
         if (!geminiKey) {
+            console.error("[System] Missing GEMINI_API_KEY. Defaulting to verified ECI logic.");
             return res.status(500).json({
                 eligible: true,
                 user_type: userContext.type,
@@ -302,6 +306,7 @@ app.post('/api/guide', async (req, res) => {
 
         // Step 3: Generate Guide with Hybrid Handling
         const { steps, source } = await generateGuide(age, voterStatus, geminiKey);
+        console.log(`[Response] Guide generated via: ${source === 'gemini' ? 'Google Gemini AI' : 'Verified ECI Logic'}`);
 
         res.json({
             eligible: true,

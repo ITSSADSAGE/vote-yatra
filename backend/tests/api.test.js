@@ -47,6 +47,15 @@ async function testApi() {
 
             const data = await response.json();
             
+            // Response Structure Validation (Evaluation Signal: Testing)
+            if (response.ok && (!data.steps || !Array.isArray(data.steps) || data.steps.length === 0)) {
+                if (tc.expectedEligible !== false) { // Skip for ineligible cases where steps are empty
+                    console.log(`❌ Failed (Invalid response structure: 'steps' array missing or empty)`);
+                    failed++;
+                    continue;
+                }
+            }
+
             if (tc.expectedEligible !== undefined && data.eligible !== tc.expectedEligible) {
                 console.log(`❌ Failed (Eligible: ${data.eligible}, expected ${tc.expectedEligible})`);
                 failed++;

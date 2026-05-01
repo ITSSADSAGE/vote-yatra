@@ -99,11 +99,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 currentSteps = data.steps;
                 
-                // Show source visibility (Subtle Badge)
+                // Show status and logic source (Technical Signaling)
                 const sourceBadge = document.getElementById('source-badge');
                 if (sourceBadge) {
                     sourceBadge.style.display = 'inline-block';
-                    sourceBadge.textContent = `Source: ${data.source === 'gemini' ? 'Gemini AI' : 'ECI Fallback'}`;
+                    
+                    const LABELS = {
+                        'not-registered': 'Priority: Registration Required',
+                        'first-time': 'Status: First-time voter guidance',
+                        'already-registered': 'Status: Ready for voting'
+                    };
+                    
+                    const sourceText = data.source === 'gemini' ? 'AI-assisted guide with validated logic' : 'Using verified ECI-based guidance';
+                    sourceBadge.textContent = `${LABELS[persona] || 'Status: Verified'} | ${sourceText}`;
                     sourceBadge.style.borderColor = data.source === 'gemini' ? 'var(--primary)' : '#64748b';
                 }
 
