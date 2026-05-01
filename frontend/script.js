@@ -13,6 +13,13 @@ const SIMULATION_STEPS = [
     { title: "Cast Your Vote", description: "Press the blue button next to your candidate's symbol. Wait for the beep.", feedback: "VVPAT slip printed. Vote successfully recorded!" }
 ];
 
+const DEMO_STEPS = [
+    { title: "Step 1: Check Registration", description: "Voters check their name in the electoral search portal.", insight: "Ensures legal eligibility.", action: "Visit voters.eci.gov.in", tip: "Always have your EPIC number ready." },
+    { title: "Step 2: Reach Polling Booth", description: "On election day, voters go to their assigned polling station.", insight: "Ensures local representation.", action: "Check Voter Helpline App for booth location", tip: "Reach early to avoid long queues." },
+    { title: "Step 3: Identity Check", description: "Officers verify ID and apply indelible ink on the finger.", insight: "Prevents duplicate voting.", action: "Show Voter ID or Aadhaar", tip: "Indelible ink is a mark of pride!" },
+    { title: "Step 4: Press the Button", description: "Inside the booth, press the button on the EVM for your chosen candidate.", insight: "The core act of democracy.", action: "Press button and listen for the beep", tip: "Check the VVPAT slip through the glass." }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const personaSection = document.getElementById('persona-section');
@@ -29,21 +36,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const startSimBtn = document.getElementById('start-simulation');
     const simNextBtn = document.getElementById('sim-next-btn');
     const restartBtn = document.getElementById('restart-btn');
+    const errorDisplay = document.getElementById('error-display');
+    const demoBtn = document.getElementById('demo-journey-btn');
 
     function determineUserPath(age, status) {
-        if (age < 18) return `You must be 18 or older to vote in India. Focus on learning about our democracy for now!`;
-        if (status === "not-registered") return `Voter registration is your first step. You need to be on the Electoral Roll to cast your vote.`;
-        if (status === "first-time") return `Welcome to your first election! We'll guide you through registration and your first trip to the booth.`;
-        return `You're all set to exercise your right! Let's verify your booth details and prepare for election day.`;
+        if (age < 18) return `You are not eligible yet. Focus on learning about Indian democracy for now!`;
+        if (status === "not-registered") return `You are not registered. Let’s get you on the Electoral Roll first.`;
+        if (status === "first-time") return `You are a first-time voter. Let’s get you ready step-by-step.`;
+        return `You are already registered. Let’s verify your details for election day.`;
     }
 
     personaBtns.forEach(btn => {
         btn.addEventListener('click', async () => {
-            const age = parseInt(ageInput.value);
+            const ageStr = ageInput.value.trim();
+            const age = parseInt(ageStr);
             const persona = btn.getAttribute('data-persona');
 
-            if (!ageInput.value) {
-                showError('Please enter your age first.');
+            if (!ageStr || isNaN(age)) {
+                showError('Please enter a valid age.');
+                return;
+            }
+
+            if (age < 18) {
+                showError('You must be at least 18 to vote in India. You can still explore how the voting process works.');
+                personaBtns.forEach(btn => btn.classList.add('disabled'));
+                demoBtn.classList.remove('hidden');
                 return;
             }
 
@@ -78,7 +95,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showError(err.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = btn.getAttribute('data-persona').replace('-', ' ');
+                const LABELS = {
+                    'first-time': 'I am a first-time voter',
+                    'not-registered': 'I am not registered yet',
+                    'already-registered': 'I am already registered'
+                };
+                btn.textContent = LABELS[btn.getAttribute('data-persona')] || btn.getAttribute('data-persona');
             }
         });
     });
@@ -97,23 +119,21 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = `${progress}%`;
 
         stepsContainer.innerHTML = `
-            <div class="step-card">
-                <h3>${step.title}</h3>
-                <p>${step.description}</p>
+            <p class="step-counter">Step ${currentStepIndex + 1} — ${step.title}</p>
+
+            <div class="step-card fade-in">
+                <h3 class="step-title">${step.title}</h3>
+                <p class="step-desc">${step.description}</p>
+
                 ${step.insight ? `
-                <p style="font-size: 0.85rem; color: #64748b; font-style: italic; margin-top: -0.5rem; margin-bottom: 1rem;">
-                    <strong>Why this matters:</strong> ${step.insight}
-                </p>` : ''}
+                <p class="step-insight"><em>Why this matters:</em> ${step.insight}</p>` : ''}
+
                 ${step.action ? `
-                <p style="font-size: 0.9rem; color: #7dd3fc; font-weight: 600; margin-bottom: 1rem; background: rgba(125,211,252,0.07); padding: 0.7rem 1rem; border-radius: 8px; border-left: 3px solid #7dd3fc;">
-                    ▶ Action: ${step.action}
-                </p>` : ''}
+                <div class="step-action">▶ ${step.action}</div>` : ''}
+
                 ${step.tip ? `
-                <div class="pro-tip">
-                    <strong>💡 Pro-Tip:</strong> ${step.tip}
-                </div>` : ''}
+                <div class="pro-tip">💡 <strong>Tip:</strong> ${step.tip}</div>` : ''}
             </div>
-            <p style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Step ${currentStepIndex + 1} of ${currentSteps.length}</p>
         `;
 
         prevBtn.style.visibility = currentStepIndex === 0 ? 'hidden' : 'visible';
@@ -153,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const step = SIMULATION_STEPS[simStepIndex];
         
         simulationContent.innerHTML = `
-            <div class="step-card sim-step-card">
+            <div class="step-card fade-in">
                 <h3 style="color: var(--primary);">Simulation Step ${simStepIndex + 1}</h3>
                 <h4 style="margin-bottom: 1rem; color: white;">${step.title}</h4>
                 <p>${step.description}</p>
@@ -250,6 +270,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showError(message) {
-        alert(message);
+        errorDisplay.textContent = message;
+        errorDisplay.classList.remove('hidden');
     }
+
+    function clearError() {
+        errorDisplay.textContent = '';
+        errorDisplay.classList.add('hidden');
+    }
+
+    // Real-time age validation and UX feedback
+    ageInput.addEventListener('input', () => {
+        const ageStr = ageInput.value.trim();
+        const age = parseInt(ageStr);
+        clearError();
+
+        if (ageStr.length >= 2) {
+            if (age < 18) {
+                personaBtns.forEach(btn => btn.classList.add('disabled'));
+                demoBtn.classList.remove('hidden');
+                showError('You must be at least 18 to vote in India. You can still explore how the voting process works.');
+            } else {
+                personaBtns.forEach(btn => btn.classList.remove('disabled'));
+                demoBtn.classList.add('hidden');
+            }
+        } else {
+            // Under 2 digits: Clear errors but keep buttons visually disabled
+            personaBtns.forEach(btn => btn.classList.add('disabled'));
+            demoBtn.classList.add('hidden');
+        }
+    });
+
+    demoBtn.addEventListener('click', () => {
+        selectedPersona = 'already-registered'; // Set a default for completion screen
+        currentSteps = DEMO_STEPS;
+        decisionBanner.textContent = "Viewing Demo Journey: Here is how the voting process works in India.";
+        startJourney();
+    });
 });

@@ -25,16 +25,22 @@
             <!-- Section 1: Persona Selection -->
             <section id="persona-section" class="section">
                 <div class="card">
-                    <h2>Choose Your Persona</h2>
-                    <p>Enter your age and select your status.</p>
-                    <div class="input-group" style="margin-bottom: 1.5rem;">
-                        <input type="number" id="user-age" placeholder="Enter your age" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
+                    <h2>Start Your VoteYatra</h2>
+                    <p>Enter your age and select your current voting status.</p>
+                    <div id="error-display" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: -1rem; margin-bottom: 1.5rem;">Select one option to begin your journey</p>
+                    <div class="input-group" style="margin-bottom: 2rem;">
+                        <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
                     </div>
                     <div class="button-group">
-                        <button class="persona-btn" data-persona="first-time">First-time Voter</button>
-                        <button class="persona-btn" data-persona="not-registered">Not Registered</button>
-                        <button class="persona-btn" data-persona="already-registered">Already Registered</button>
+                        <button class="persona-btn" data-persona="first-time">I am a first-time voter</button>
+                        <button class="persona-btn" data-persona="not-registered">I am not registered yet</button>
+                        <button class="persona-btn" data-persona="already-registered">I am already registered</button>
                     </div>
+                    <button id="demo-journey-btn" class="demo-btn hidden">View how voting works</button>
+                    <p style="margin-top: 1.5rem; font-size: 0.8rem; color: #64748b; text-align: center;">
+                        🗳️ Based on Election Commission of India processes
+                    </p>
                 </div>
             </section>
 
@@ -42,29 +48,30 @@
             <section id="journey-section" class="section hidden">
                 <div class="card">
                     <!-- Decision Banner -->
-                    <div id="decision-banner" style="background: rgba(19, 136, 8, 0.1); border: 1px solid var(--secondary); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; color: var(--secondary); font-weight: 600;">
+                    <div id="decision-banner" class="decision-banner">
                         <!-- Decision will be injected here -->
                     </div>
 
                     <h2 id="journey-title">Your Voting Journey</h2>
                     
                     <!-- Progress Bar -->
-                    <div class="progress-container" style="height: 8px; background: #334155; border-radius: 4px; margin-bottom: 2rem; overflow: hidden;">
-                        <div id="progress-bar" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.3s ease;"></div>
+                    <div class="progress-container">
+                        <div id="progress-bar"></div>
                     </div>
+
+                    <p style="margin-top: -2rem; margin-bottom: 2rem; font-size: 0.75rem; color: #64748b; text-align: center;">
+                        🗳️ Based on Election Commission of India guidelines
+                    </p>
 
                     <div id="steps-container">
                         <!-- Steps will be injected here -->
                     </div>
                     <div class="nav-buttons">
                         <button id="prev-step" class="secondary-btn">Previous</button>
-                        <button id="next-step" class="primary-btn">Next Step</button>
-                        <button id="start-simulation" class="primary-btn hidden">Start Simulation</button>
+                        <button id="next-step" class="primary-btn">Continue</button>
+                        <button id="start-simulation" class="primary-btn hidden">Start Voting Simulation</button>
                     </div>
 
-                    <p style="margin-top: 1.5rem; font-size: 0.75rem; color: #475569; text-align: center;">
-                        🗳️ Based on Election Commission of India guidelines
-                    </p>
                 </div>
             </section>
 

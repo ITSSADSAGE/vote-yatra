@@ -20,12 +20,21 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-light);
     display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#app {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
 header {
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem 0.5rem;
     text-align: center;
 }
 
@@ -43,7 +52,7 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 2rem;
+    padding: 1rem 2rem 2rem;
 }
 
 .section {
@@ -98,61 +107,165 @@ button {
     border: 2px solid #334155;
 }
 
+.primary-btn:active, .secondary-btn:active {
+    transform: scale(0.97);
+    filter: brightness(0.9);
+}
+
 .persona-btn {
     background: #334155;
     color: white;
 }
 
 .persona-btn:hover {
-    background: var(--primary);
+    background: #3f526b;
     transform: translateY(-2px);
+}
+
+.persona-btn:active {
+    transform: scale(0.98);
+    background: #2d3f52;
+}
+
+.persona-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+
+.demo-btn {
+    background: #1e293b;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    margin-top: 1rem;
+    width: 100%;
+}
+
+.demo-btn:hover {
+    background: rgba(255, 153, 51, 0.1);
 }
 
 .nav-buttons {
     display: flex;
     justify-content: space-between;
-    margin-top: 2rem;
+    margin-top: 3.5rem;
 }
 
-.step-card {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2rem;
-    border-radius: var(--radius);
-    margin-bottom: 1rem;
-    text-align: left;
-    border-left: 6px solid var(--primary);
-    transition: transform 0.3s ease;
-}
-
-.step-card h3 {
-    font-size: 1.4rem;
-    font-weight: 800;
-    margin-bottom: 0.8rem;
-    color: white;
-}
-
-.step-card p {
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    color: var(--text-muted);
-}
-
-.pro-tip {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: rgba(255, 153, 51, 0.1);
-    border-radius: 8px;
-    font-size: 0.95rem;
+/* Step counter — visible above the card */
+.step-counter {
+    font-size: 0.85rem;
+    font-weight: 700;
     color: var(--primary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    text-align: left;
+}
+
+/* Step card container */
+.step-card {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 1.75rem 2rem;
+    border-radius: var(--radius);
+    border-left: 5px solid var(--primary);
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+/* Title — bold, large, easy to scan */
+.step-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 0.6rem;
+}
+
+/* Description — readable body text */
+.step-desc {
+    font-size: 0.97rem;
+    color: #cbd5e1;
+    line-height: 1.6;
+    margin-bottom: 1.1rem;
+}
+
+/* Why this matters — muted, italic, clearly secondary */
+.step-insight {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-style: italic;
+    margin-bottom: 1.25rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid #475569;
+    line-height: 1.5;
+}
+
+/* Action item — sky-blue, highlighted, scannable */
+.step-action {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #7dd3fc;
+    background: rgba(125, 211, 252, 0.12);
+    border: 1px solid rgba(125, 211, 252, 0.3);
+    border-left: 5px solid #7dd3fc;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Pro-tip — amber box, clearly distinct */
+.pro-tip {
+    padding: 0.85rem 1rem;
+    background: rgba(255, 153, 51, 0.08);
     border: 1px dashed var(--primary);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--primary);
+    line-height: 1.5;
 }
 
-.sim-step-card {
-    animation: slideIn 0.4s ease-out;
+/* Progress bar enhancements */
+.progress-container {
+    height: 14px;
+    background: #0f172a;
+    border-radius: 7px;
+    margin-bottom: 3rem;
+    overflow: hidden;
+    border: 1px solid #334155;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(20px); }
+#progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #FF9933, #FFB366, #FF9933);
+    background-size: 200% 100%;
+    transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 15px rgba(255, 153, 51, 0.6);
+}
+
+/* Decision Banner refinements */
+.decision-banner {
+    background: rgba(19, 136, 8, 0.1);
+    border: 1px solid var(--secondary);
+    padding: 1.25rem;
+    border-radius: 10px;
+    margin-bottom: 2rem;
+    color: #4ade80;
+    font-weight: 600;
+    text-align: left;
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+
+/* Step transition animations */
+.fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -163,10 +276,11 @@ button {
 }
 
 footer {
-    padding: 1.5rem;
+    padding: 2rem;
     text-align: center;
-    font-size: 0.9rem;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    color: #475569;
+    letter-spacing: 0.02em;
 }
 
 @media (max-width: 480px) {

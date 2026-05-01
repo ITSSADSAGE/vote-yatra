@@ -12,6 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // Fallback steps in case AI fails or returns invalid JSON
+// This ensures the service remains functional even if the AI model is unavailable
 const FALLBACK_STEPS = [
     { 
         title: "Verify Registration", 
@@ -43,6 +44,44 @@ const FALLBACK_STEPS = [
     }
 ];
 
+/**
+ * Helper to determine user classification metadata
+ * @param {number} age 
+ * @param {string} status 
+ * @returns {object} { type, reason }
+ */
+function getClassification(age, status) {
+    if (age < 18) {
+        return { 
+            type: "ineligible", 
+            reason: "User is under the legal voting age of 18 in India." 
+        };
+    }
+    
+    switch (status) {
+        case 'first-time':
+            return { 
+                type: "new_voter", 
+                reason: "User is 18+ and voting for the first time; requires end-to-end guidance." 
+            };
+        case 'not-registered':
+            return { 
+                type: "unregistered_voter", 
+                reason: "User is eligible but not yet on the electoral roll; requires registration focus." 
+            };
+        case 'already-registered':
+            return { 
+                type: "ready_voter", 
+                reason: "User is already registered; requires polling day and candidate info focus." 
+            };
+        default:
+            return { 
+                type: "standard_voter", 
+                reason: "General eligibility confirmed; providing standard voting journey." 
+            };
+    }
+}
+
 app.post('/api/guide', async (req, res) => {
     const { age, voterStatus } = req.body;
 
@@ -50,15 +89,24 @@ app.post('/api/guide', async (req, res) => {
         return res.status(400).json({ error: "Age and voter status are required." });
     }
 
+    // Determine classification metadata based on decision logic
+    const classification = getClassification(age, voterStatus);
+
     if (age < 18) {
         return res.json({ 
             eligible: false,
+            user_type: classification.type,
+            reason: classification.reason,
+            source: "static_check",
             message: "In India, you must be 18 or older to vote. Use this time to learn about candidates and issues!" 
         });
     }
 
+    let source = "gemini";
+    let steps = [];
+
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         const prompt = `
             You are VoteYatra, a specialized civic assistant for Indian voters.
@@ -94,30 +142,32 @@ app.post('/api/guide', async (req, res) => {
         const response = await result.response;
         let text = response.text().replace(/```json|```/g, '').trim();
 
-        let guideData;
         try {
-            guideData = JSON.parse(text);
+            const guideData = JSON.parse(text);
             if (!guideData.steps || !Array.isArray(guideData.steps)) throw new Error("Invalid format");
+            steps = guideData.steps;
         } catch (parseError) {
-            console.warn("AI parsing failed, using fallback steps.");
-            guideData = { steps: FALLBACK_STEPS };
+            // Fallback Handling: trigger if AI returns malformed JSON
+            console.warn("AI parsing failed, switching to fallback source.");
+            steps = FALLBACK_STEPS;
+            source = "fallback";
         }
 
-        res.json({
-            eligible: true,
-            persona: voterStatus,
-            steps: guideData.steps
-        });
-
     } catch (error) {
+        // Fallback Handling: trigger if API call fails or times out
         console.error("Critical Backend Error:", error);
-        res.json({
-            eligible: true,
-            persona: voterStatus,
-            steps: FALLBACK_STEPS,
-            warning: "Note: Displaying standard guide due to service interruption."
-        });
+        steps = FALLBACK_STEPS;
+        source = "fallback";
     }
+
+    // Consistent response structure for transparency and evaluation
+    res.json({
+        eligible: true,
+        user_type: classification.type,
+        reason: classification.reason,
+        source: source,
+        steps: steps
+    });
 });
 
 app.listen(PORT, () => {
