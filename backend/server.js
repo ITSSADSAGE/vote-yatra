@@ -10,6 +10,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
+
+// Serve the frontend index.html for the root route
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
 
 // Fallback steps in case AI fails or returns invalid JSON
 // This ensures the service remains functional even if the AI model is unavailable

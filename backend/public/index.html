@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoteYatra</title>
+    <meta name="description" content="Discover your political landscape and make an informed choice with VoteYatra.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <nav>
+                <div class="logo">Vote<span>Yatra</span></div>
+                <p style="font-size: 0.95rem; color: #64748b; margin-top: 0.3rem; font-weight: 400;">
+                    A personalized step-by-step guide to help you understand and complete your voting journey.
+                </p>
+            </nav>
+        </header>
+
+        <main id="main-content">
+            <!-- Section 1: Persona Selection -->
+            <section id="persona-section" class="section">
+                <div class="card">
+                    <h2>Start Your VoteYatra</h2>
+                    <p>Enter your age and select your current voting status.</p>
+                    <div id="error-display" class="hidden" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: -1rem; margin-bottom: 1.5rem;">Select one option to begin your journey</p>
+                    <div class="input-group" style="margin-bottom: 2rem;">
+                        <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
+                    </div>
+                    <div class="button-group">
+                        <button class="persona-btn" data-persona="first-time">I am a first-time voter</button>
+                        <button class="persona-btn" data-persona="not-registered">I am not registered yet</button>
+                        <button class="persona-btn" data-persona="already-registered">I am already registered</button>
+                    </div>
+                    <button id="demo-journey-btn" class="demo-btn hidden">View how voting works</button>
+                    <p style="margin-top: 1.5rem; font-size: 0.8rem; color: #64748b; text-align: center;">
+                        🗳️ Based on Election Commission of India processes
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section 2: Step-by-Step Journey -->
+            <section id="journey-section" class="section hidden">
+                <div class="card">
+                    <!-- Decision Banner -->
+                    <div id="decision-banner" class="decision-banner">
+                        <!-- Decision will be injected here -->
+                    </div>
+
+                    <h2 id="journey-title">Your Voting Journey</h2>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress-container">
+                        <div id="progress-bar"></div>
+                    </div>
+
+                    <p style="margin-top: -2rem; margin-bottom: 2rem; font-size: 0.75rem; color: #64748b; text-align: center;">
+                        🗳️ Based on Election Commission of India guidelines
+                    </p>
+
+                    <div id="steps-container">
+                        <!-- Steps will be injected here -->
+                    </div>
+                    <div class="nav-buttons">
+                        <button id="prev-step" class="secondary-btn">Previous</button>
+                        <button id="next-step" class="primary-btn">Continue</button>
+                        <button id="start-simulation" class="primary-btn hidden">Start Voting Simulation</button>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Section 3: Voting Day Simulation -->
+            <section id="simulation-section" class="section hidden">
+                <div class="card">
+                    <h2>Voting Day Simulation</h2>
+                    <p id="sim-intro">Experience the process at the polling station.</p>
+                    
+                    <div id="simulation-content" style="margin: 2rem 0;">
+                        <!-- Simulation steps will be injected here one by one -->
+                    </div>
+
+                    <div class="nav-buttons">
+                        <button id="sim-next-btn" class="primary-btn">Continue</button>
+                        <button id="restart-btn" class="secondary-btn hidden">Back to Start</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2026 VoteYatra. Empowering Voters.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
