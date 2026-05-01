@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restart-btn');
     const errorDisplay = document.getElementById('error-display');
     const demoBtn = document.getElementById('demo-journey-btn');
+    const boothBtn = document.getElementById('find-booth-btn');
+    const boothModal = document.getElementById('booth-modal');
+    const closeBoothModal = document.getElementById('close-booth-modal');
+    const boothResults = document.getElementById('booth-results');
 
     function determineUserPath(age, status) {
         if (age < 18) return `You are not eligible yet. Focus on learning about Indian democracy for now!`;
@@ -307,4 +311,92 @@ document.addEventListener('DOMContentLoaded', () => {
         decisionBanner.textContent = "Viewing Demo Journey: Here is how the voting process works in India.";
         startJourney();
     });
+
+    // Booth Locator Logic
+    boothBtn.addEventListener('click', () => {
+        boothModal.classList.remove('hidden');
+        findNearbyBooths();
+    });
+
+    closeBoothModal.addEventListener('click', () => {
+        boothModal.classList.add('hidden');
+    });
+
+    async function findNearbyBooths() {
+        boothResults.innerHTML = `
+            <div class="spinner"></div>
+            <p style="text-align: center; color: var(--text-muted);">Fetching live data from OpenStreetMap...</p>
+        `;
+
+        if (!navigator.geolocation) {
+            showBoothFallback("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            const radius = 5000; // 5km search radius
+
+            // Overpass API Query for polling stations
+            const query = `[out:json][timeout:3];node["amenity"="polling_station"](around:${radius},${latitude},${longitude});out body;`;
+            const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                const data = await response.json();
+                if (data.elements && data.elements.length > 0) {
+                    renderBooths(data.elements);
+                } else {
+                    showBoothFallback("No specific polling booths found nearby in OpenStreetMap.");
+                }
+            } catch (err) {
+                console.error("Booth lookup failed:", err);
+                showBoothFallback("Live data lookup timed out or failed.");
+            }
+        }, (err) => {
+            showBoothFallback("Location access denied or unavailable.");
+        });
+    }
+
+    function renderBooths(elements) {
+        const listHTML = elements.slice(0, 5).map(e => {
+            const name = e.tags.name || "Polling Station";
+            const addr = e.tags["addr:full"] || "Location details unavailable";
+            return `
+                <div class="booth-item">
+                    <h4>${name}</h4>
+                    <p>${addr}</p>
+                    <a class="booth-map-link" href="https://www.google.com/maps?q=${e.lat},${e.lon}" target="_blank">View on Google Maps</a>
+                </div>
+            `;
+        }).join('');
+
+        boothResults.innerHTML = `
+            <div class="booth-list">
+                ${listHTML}
+            </div>
+            <p style="font-size: 0.75rem; color: #64748b; margin-top: 1rem; text-align: center;">
+                Results provided by OpenStreetMap Contributors
+            </p>
+        `;
+    }
+
+    function showBoothFallback(reason) {
+        boothResults.innerHTML = `
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1rem;">${reason} Showing general nearby results:</p>
+            <iframe 
+                width="100%" 
+                height="300" 
+                style="border:0; border-radius: 8px;" 
+                loading="lazy" 
+                allowfullscreen 
+                src="https://www.google.com/maps?q=polling+booth+near+me&output=embed">
+            </iframe>
+        `;
+    }
 });
