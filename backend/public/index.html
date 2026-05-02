@@ -13,80 +13,105 @@
 <body>
     <div id="app">
         <header>
-            <nav>
+            <nav class="header-nav">
                 <div class="logo">Vote<span>Yatra</span></div>
-                <p style="font-size: 0.95rem; color: #64748b; margin-top: 0.3rem; font-weight: 400;">
-                    A personalized step-by-step guide to help you understand and complete your voting journey.
-                </p>
+                <div class="header-right">
+                    <select id="lang-select" class="lang-select">
+                        <option value="en">English</option>
+                        <option value="hi">हिंदी</option>
+                        <option value="mr">मराठी</option>
+                        <option value="bn">বাংলা</option>
+                        <option value="te">తెలుగు</option>
+                    </select>
+                </div>
             </nav>
+            <p data-i18n="header_desc" class="header-subtitle">
+                A personalized step-by-step guide to help you understand and complete your voting journey.
+            </p>
         </header>
 
         <main id="main-content">
             <!-- Section 1: Persona Selection -->
             <section id="persona-section" class="section">
                 <div class="card">
-                    <h2>Start Your VoteYatra</h2>
-                    <p>Enter your age and select your current voting status.</p>
-                    <div id="error-display" class="hidden" role="alert" aria-live="assertive" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; font-weight: 600;"></div>
-                    <p style="font-size: 0.8rem; color: #64748b; margin-top: -1rem; margin-bottom: 1.5rem;">Select one option to begin your journey</p>
-                    <div class="input-group" style="margin-bottom: 2rem;">
-                        <label for="user-age" class="sr-only">Your Age</label>
-                        <input type="number" id="user-age" placeholder="Enter your age (must be 18+)" aria-describedby="age-hint" min="1" max="120" style="padding: 0.8rem; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 100%;">
-                        <p id="age-hint" class="sr-only">Entering age below 18 will restrict access to voting guides.</p>
+                    <h2 data-i18n="title">Start Your VoteYatra</h2>
+                    <p data-i18n="subtitle">Enter your age and select your current voting status.</p>
+                    <div id="error-display" class="hidden error-box"></div>
+                    
+                    <div class="input-group">
+                        <input type="number" id="user-age" data-i18n="age_placeholder" placeholder="Enter your age (must be 18+)" min="1" max="120">
                     </div>
-                    <div class="button-group" role="group" aria-label="Select your voter category">
-                        <button class="persona-btn" data-persona="first-time" aria-label="Journey for first-time voters">I am a first-time voter</button>
-                        <button class="persona-btn" data-persona="not-registered" aria-label="Journey for unregistered citizens">I am not registered yet</button>
-                        <button class="persona-btn" data-persona="already-registered" aria-label="Journey for registered voters">I am already registered</button>
+                    <div class="button-group">
+                        <button class="persona-btn" data-persona="first-time" data-i18n="first_time">First-time voter (already registered)</button>
+                        <button class="persona-btn" data-persona="not-registered" data-i18n="not_registered">Not registered yet (apply now)</button>
+                        <button class="persona-btn" data-persona="already-registered" data-i18n="already_registered">I have voted before</button>
                     </div>
-                    <button id="demo-journey-btn" class="demo-btn hidden">View how voting works</button>
-                    <p style="margin-top: 1.5rem; font-size: 0.8rem; color: #64748b; text-align: center;">
+                    <button id="demo-journey-btn" class="demo-btn hidden" data-i18n="demo_journey">View how voting works</button>
+                    <p class="source-tag">
                         🗳️ Based on Election Commission of India processes
                     </p>
                 </div>
             </section>
 
-            <!-- Section 2: Step-by-Step Journey -->
+            <!-- Section 2: Step-by-Step Voting Journey -->
             <section id="journey-section" class="section hidden">
                 <div class="card">
-                    <!-- Decision Banner -->
-                    <div id="decision-banner" class="decision-banner">
-                        <!-- Decision will be injected here -->
-                    </div>
-
-                    <h2 id="journey-title">Your Voting Journey</h2>
+                    <h2 id="journey-title" data-i18n="journey_title">Your Voting Journey</h2>
                     
-                    <!-- Progress Bar -->
                     <div class="progress-container">
                         <div id="progress-bar"></div>
                     </div>
 
-                    <p style="margin-top: -2rem; margin-bottom: 2rem; font-size: 0.75rem; color: #64748b; text-align: center;">
-                        🗳️ Based on Election Commission of India guidelines 
-                        <span id="source-badge" style="margin-left: 0.5rem; opacity: 0.7; font-size: 0.65rem; border: 1px solid #334155; padding: 2px 6px; border-radius: 4px; display: none;"></span>
+                    <!-- Source Indicator Badge -->
+                    <div id="source-badge" class="source-badge source-badge--eci">
+                        <span id="source-badge-text">📜 Based on ECI Official Guidelines</span>
+                    </div>
+
+                    <p data-i18n="eci_guidelines" class="guidelines-text">
+                        🗳️ Based on Election Commission of India guidelines
                     </p>
 
                     <div id="steps-container">
                         <!-- Steps will be injected here -->
                     </div>
-                    <button id="find-booth-btn" class="beta-btn">📍 Find Nearby Polling Booths (Beta)</button>
+                    <button id="find-booth-btn" class="secondary-btn booth-btn" data-i18n="find_booth">📍 Find Nearby Polling Booths (Beta)</button>
                     <div class="nav-buttons">
-                        <button id="prev-step" class="secondary-btn">Previous</button>
-                        <button id="next-step" class="primary-btn">Continue</button>
-                        <button id="start-simulation" class="primary-btn hidden">Start Voting Simulation</button>
+                        <button id="prev-step" class="secondary-btn" data-i18n="prev">Previous</button>
+                        <button id="next-step" class="primary-btn glow" data-i18n="next_step">Next Step</button>
+                        <button id="start-simulation" class="primary-btn hidden" data-i18n="start_sim">Start Voting Simulation</button>
                     </div>
-
                 </div>
             </section>
 
-            <!-- Section 3: Voting Day Simulation -->
+            <!-- Section 3: Learning Journey (Underage) -->
+            <section id="learning-section" class="section hidden">
+                <div class="card learning-card">
+                    <div class="learning-badge">📘 <span data-i18n="learning_mode">Learning Mode</span></div>
+                    <h2 id="learning-title" data-i18n="learning_title">Voter Education Hub</h2>
+                    <p data-i18n="learning_hook" class="learning-hook">Let's break down how voting works in India</p>
+                    
+                    <div class="progress-container">
+                        <div id="learning-progress-bar"></div>
+                    </div>
+
+                    <div id="learning-container">
+                        <!-- Learning steps injected here -->
+                    </div>
+                    <div class="nav-buttons">
+                        <button id="prev-learning" class="secondary-btn" data-i18n="prev">Previous</button>
+                        <button id="next-learning" class="primary-btn glow" data-i18n="next_step">Next Step</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Voting Day Simulation -->
             <section id="simulation-section" class="section hidden">
                 <div class="card">
                     <h2>Voting Day Simulation</h2>
                     <p id="sim-intro">Experience the process at the polling station.</p>
                     
-                    <div id="simulation-content" style="margin: 2rem 0;">
-                        <!-- Simulation steps will be injected here one by one -->
+                    <div id="simulation-content">
+                        <!-- Simulation steps will be injected here -->
                     </div>
 
                     <div class="nav-buttons">
@@ -98,10 +123,16 @@
         </main>
 
         <footer>
-            <p>&copy; 2026 VoteYatra. Empowering Voters.</p>
-            <p style="font-size: 0.7rem; color: #64748b; margin-top: 0.5rem; letter-spacing: 0.05em;">
-                Powered by Google Gemini AI + Cloud Run backend
-            </p>
+            <div class="sys-intel">
+                <span class="sys-intel__label">Powered by</span>
+                <div class="sys-intel__chips">
+                    <span class="sys-chip sys-chip--gemini">Gemini AI</span>
+                    <span class="sys-chip sys-chip--cloud">Google Cloud Run</span>
+                    <span class="sys-chip sys-chip--cache">Smart Cache</span>
+                    <span class="sys-chip sys-chip--eci">ECI Fallback</span>
+                </div>
+            </div>
+            <p class="footer-copy">&copy; 2026 VoteYatra &mdash; Structured voting guidance powered by Gemini AI.</p>
         </footer>
     </div>
 
@@ -109,17 +140,18 @@
     <div id="booth-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button id="close-booth-modal" class="close-modal">&times;</button>
-            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Nearby Polling Locations (Beta)</h3>
-            <p id="booth-modal-status" style="font-size: 0.8rem; margin-bottom: 1.5rem;">Fetching nearby locations...</p>
-            
+            <h3 class="modal-title">Nearby Polling Booths</h3>
             <div id="booth-results">
-                <!-- Loading or results injected here -->
                 <div class="spinner"></div>
-                <p style="text-align: center; color: var(--text-muted);">Fetching live data from OpenStreetMap...</p>
             </div>
         </div>
     </div>
 
+    <!-- Load Modules -->
+    <script src="js/personaEngine.js"></script>
+    <script src="js/flows.js"></script>
+    <script src="js/uiRenderer.js"></script>
+    <script src="js/languageEngine.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

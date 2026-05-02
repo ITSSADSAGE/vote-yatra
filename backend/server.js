@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const fetch = globalThis.fetch || require('node-fetch');
@@ -111,7 +112,11 @@ function getGeminiApiKey() {
 
 function parseGeminiJsonResponse(data) {
     try {
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const text = data?.candidates?.[0]?.content?.parts
+            ?.map(part => part?.text || '')
+            .filter(Boolean)
+            .join('')
+            .trim();
         if (!text || typeof text !== 'string') return null;
 
         const jsonMatch = text.match(/```json\s*([\s\S]*?)```/i);
@@ -123,58 +128,124 @@ function parseGeminiJsonResponse(data) {
     }
 }
 
+async function readGeminiResponse(response) {
+    const rawText = await response.text();
+
+    if (!rawText) {
+        return { rawText: "", data: null };
+    }
+
+    try {
+        return { rawText, data: JSON.parse(rawText) };
+    } catch {
+        return { rawText, data: null };
+    }
+}
+
 /**
  * 3. Generate Guide (Google Services Integration)
- * Calls Google Gemini API (2.0 Flash) to create a personalized voting journey.
+ * Calls Google Gemini API (2.5 Flash) to create a personalized voting journey.
  */
-const API_BASE_URL = "https://generativelanguage.googleapis.com/v1/models";
+const API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-async function generateGuide(age, voterStatus, geminiKey) {
-    const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash"];
+const LANGUAGE_NAMES = {
+    en: "English",
+    hi: "Hindi",
+    mr: "Marathi",
+    bn: "Bengali",
+    te: "Telugu"
+};
+
+
+// Heuristic: detect if response looks like English when non-English was requested
+function looksEnglish(steps) {
+    const COMMON_EN = ['the', 'your', 'you', 'and', 'to', 'is', 'are', 'for', 'of', 'in', 'on', 'at', 'with'];
+    const sample = steps.slice(0, 2).map(s => (s.title || '') + ' ' + (s.description || '')).join(' ').toLowerCase();
+    const hits = COMMON_EN.filter(w => new RegExp('\\b' + w + '\\b').test(sample)).length;
+    return hits >= 4;
+}
+
+async function generateGuide(age, voterStatus, geminiKey, language = 'en') {
+    const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash"];
+    const languageName = LANGUAGE_NAMES[language] || "English";
     let lastError = null;
+
+    // Check cache BEFORE attempting any API call
+    const cacheKey = `${voterStatus}-${language}`;
+    if (responseCache.has(cacheKey)) {
+        console.log(`[Cache] HIT for key: ${cacheKey} — skipping Gemini call`);
+        return { steps: responseCache.get(cacheKey), source: "cache" };
+    }
 
     for (const modelName of modelsToTry) {
         try {
-            const cacheKey = `${age}-${voterStatus}`;
-            if (responseCache.has(cacheKey)) {
-                return { steps: responseCache.get(cacheKey), source: "gemini_cache" };
-            }
-
             console.log(`[Google Services] Requesting ${modelName} for Persona: ${voterStatus}`);
             
             const response = await fetch(`${API_BASE_URL}/${modelName}:generateContent?key=${geminiKey}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                    systemInstruction: {
+                        parts: [{ text: language !== 'en'
+                            ? 'You MUST write ALL output entirely in ' + languageName + '. Every title, description, insight, action and tip must be in ' + languageName + ' only. Never use English words or sentences.'
+                            : 'You are a civic assistant for Indian voters. Respond in English only.' }]
+                    },
                     contents: [{
                         parts: [{
-                            text: `
-                                You are VoteYatra, a specialized civic assistant for Indian voters.
-                                Task: Generate a practical, 4-step voting journey for an Indian voter.
-                                User: Age ${age}, Status ${voterStatus}.
-                                Rules: ${voterStatus === 'not-registered' ? 'Step 1 MUST be Register (Form 6).' : ''}
-                                JSON Format Only: { "steps": [{ "title": "T", "description": "D", "insight": "I", "action": "A", "tip": "T" }] }
-                            `
+                            text: `Generate a practical 4-step voting journey for an Indian voter.
+
+User Context:
+- Age: ${age}
+- Voter Status: ${voterStatus}
+- Response Language: ${languageName}
+
+Rules:
+1. 'not-registered' -> Step 1 MUST be registering via Form 6 on voters.eci.gov.in.
+2. 'first-time' -> User IS registered. Do NOT mention Form 6. Focus on booth experience, EVM/VVPAT, valid ID.
+3. 'already-registered' -> Focus on verification and polling day readiness.
+
+Respond ONLY with this JSON (no markdown wrapper):
+{"steps":[{"title":"","description":"","insight":"","action":"","tip":""}]}`
                         }]
                     }],
-                    generationConfig: { temperature: 0.2, topP: 0.8, topK: 40 }
+                    generationConfig: {
+                        temperature: 0.2,
+                        topP: 0.8,
+                        topK: 40,
+                        responseMimeType: "application/json"
+                    }
                 })
             });
 
-            const data = await response.json();
+            const { rawText, data } = await readGeminiResponse(response);
 
             if (!response.ok) {
-                throw new Error(data.error?.message || `API Error ${response.status}`);
+                console.error(`[Google Services] ${modelName} HTTP ${response.status} ${response.statusText}`);
+                console.error(`[Google Services] ${modelName} raw response: ${rawText || "<empty>"}`);
+                throw new Error(data?.error?.message || rawText || `API Error ${response.status}`);
+            }
+
+            if (!data) {
+                console.error(`[Google Services] ${modelName} returned non-JSON response: ${rawText || "<empty>"}`);
+                throw new Error("Gemini returned a non-JSON response");
             }
 
             const parsedData = parseGeminiJsonResponse(data);
-            if (!parsedData || !Array.isArray(parsedData.steps)) {
+            const steps = Array.isArray(parsedData) ? parsedData : parsedData?.steps;
+            if (!Array.isArray(steps)) {
+                console.error(`[Google Services] ${modelName} response payload: ${rawText || "<empty>"}`);
                 throw new Error("Invalid Gemini response format");
             }
 
-            // Success: Cache and return
-            responseCache.set(cacheKey, parsedData.steps);
-            return { steps: parsedData.steps, source: `gemini` };
+            // Reject English responses when non-English was requested
+            if (language !== 'en' && looksEnglish(steps)) {
+                console.warn('[Language] Response returned English for lang=' + language + ' — rejecting, not caching');
+                throw new Error('Response language mismatch: expected ' + languageName);
+            }
+            // Success: cache and return
+            responseCache.set(cacheKey, steps);
+            console.log('[Cache] SET for key: ' + cacheKey);
+            return { steps, source: 'gemini' };
 
         } catch (error) {
             lastError = error;
@@ -183,7 +254,7 @@ async function generateGuide(age, voterStatus, geminiKey) {
     }
 
     console.error("All AI Channels Failed. Triggering ECI Fallback.");
-    return { steps: getFallbackGuide(voterStatus), source: "fallback" };
+    return { steps: getFallbackGuide(voterStatus), source: "eci" };
 }
 
 /**
@@ -260,7 +331,7 @@ function getFallbackGuide(status) {
 app.post('/api/guide', async (req, res) => {
     try {
         const ip = req.ip || req.headers['x-forwarded-for'];
-        const { age, voterStatus } = req.body;
+        const { age, voterStatus, language } = req.body;
         
         console.log(`[Request] Incoming: Age=${age}, Status=${voterStatus} from IP: ${ip}`);
 
@@ -305,8 +376,8 @@ app.post('/api/guide', async (req, res) => {
         }
 
         // Step 3: Generate Guide with Hybrid Handling
-        const { steps, source } = await generateGuide(age, voterStatus, geminiKey);
-        console.log(`[Response] Guide generated via: ${source === 'gemini' ? 'Google Gemini AI' : 'Verified ECI Logic'}`);
+        const { steps, source } = await generateGuide(age, voterStatus, geminiKey, language || 'en');
+        console.log(`[Response] Guide generated via: ${String(source).startsWith('gemini') ? 'Google Gemini AI' : 'Verified ECI Logic'}`);
 
         res.json({
             eligible: true,
@@ -329,4 +400,5 @@ app.post('/api/guide', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`VoteYatra Backend running on http://localhost:${PORT}`);
+    console.log(`[Cache] Ready. Responses will be cached in-memory for this session.`);
 });

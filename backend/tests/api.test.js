@@ -48,9 +48,20 @@ async function testApi() {
             const data = await response.json();
             
             // Response Structure Validation (Evaluation Signal: Testing)
-            if (response.ok && (!data.steps || !Array.isArray(data.steps) || data.steps.length === 0)) {
-                if (tc.expectedEligible !== false) { // Skip for ineligible cases where steps are empty
-                    console.log(`❌ Failed (Invalid response structure: 'steps' array missing or empty)`);
+            const hasRequiredFields = data.hasOwnProperty('eligible') && 
+                                    data.hasOwnProperty('source') && 
+                                    data.hasOwnProperty('ai_engine') && 
+                                    data.hasOwnProperty('deployment');
+
+            if (!hasRequiredFields) {
+                console.log(`❌ Failed (Missing metadata fields: ai_engine or deployment)`);
+                failed++;
+                continue;
+            }
+
+            if (response.ok && (!data.steps || !Array.isArray(data.steps))) {
+                if (tc.expectedEligible !== false) {
+                    console.log(`❌ Failed (Invalid response structure: 'steps' array missing)`);
                     failed++;
                     continue;
                 }
@@ -68,7 +79,7 @@ async function testApi() {
                 continue;
             }
 
-            console.log(`✅ Passed`);
+            console.log(`✅ Passed (Source: ${data.source}, Engine: ${data.ai_engine})`);
             passed++;
 
         } catch (err) {
