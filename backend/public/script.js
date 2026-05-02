@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFlowName = null;
     let currentSteps = [];
     let currentStepIndex = 0;
+    let lastPersona = null;
 
     // DOM Elements
     const ageInput = document.getElementById('user-age');
@@ -76,8 +77,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('find-booth-btn').style.visibility = 'hidden';
     };
 
-    const handlePersonaClick = async (persona) => {
-        const age = parseInt(ageInput.value);
+    const handlePersonaClick = async (persona, isLanguageSwitch = false) => {
+        const ageVal = parseInt(ageInput.value);
+        const isDemo = (persona === 'underage' || persona === 'learning');
+        
+        // If demo/underage, we don't strictly need a valid age, default to 17
+        const age = (isDemo && (isNaN(ageVal) || ageVal <= 0)) ? 17 : ageVal;
+
         if (isNaN(age) || age <= 0) {
             showError(LanguageEngine.getText('error_age'));
             return;
@@ -98,11 +104,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        currentStepIndex = 0;
+        // Only reset index if we are NOT switching language
+        if (!isLanguageSwitch) {
+            currentStepIndex = 0;
+        }
 
         // 3. Learning mode — no API needed, go straight in
         if (currentUser.mode === "learning") {
-            updateCurrentSteps();
+            const steps = applySafeguards(Flows.getFlow(currentFlowName, LanguageEngine.currentLanguage), currentUser.persona);
+            currentSteps = steps;
+            UIRenderer.renderLearningJourney(currentSteps, currentStepIndex);
+            SourceIndicator.set('eci'); // Learning is always from static guidelines
             return;
         }
 
@@ -141,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.nav-buttons').style.visibility = 'visible';
         document.getElementById('find-booth-btn').style.visibility = 'visible';
 
-        // 7. Render journey once — no double render, no swap
+        // 7. Render journey
         currentSteps = steps;
         UIRenderer.renderVotingJourney(currentSteps, currentStepIndex);
         LanguageEngine.applyLanguage();
@@ -167,11 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
     personaBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const persona = btn.getAttribute('data-persona');
+            lastPersona = persona;
             handlePersonaClick(persona);
         });
     });
 
     demoBtn.addEventListener('click', () => {
+        lastPersona = 'underage';
         handlePersonaClick('underage'); // Force learning flow
     });
 
@@ -180,15 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('languageChanged', () => {
-        if (!currentFlowName || !currentUser) return;
-        // Re-render the current step in the new language (journey already loaded)
-        if (currentUser.mode === "learning") {
-            const steps = applySafeguards(Flows.getFlow(currentFlowName, LanguageEngine.currentLanguage), currentUser.persona);
-            currentSteps = steps;
-            UIRenderer.renderLearningJourney(currentSteps, currentStepIndex);
-        } else if (currentSteps.length > 0) {
-            UIRenderer.renderVotingJourney(currentSteps, currentStepIndex);
-        }
+        if (!currentFlowName || !currentUser || !lastPersona) return;
+        // Re-run handlePersonaClick with language switch mode
+        handlePersonaClick(lastPersona, true);
         LanguageEngine.applyLanguage();
     });
 
